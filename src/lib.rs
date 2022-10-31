@@ -1,13 +1,12 @@
 // #![no_std]
 use spinning_top::{const_spinlock, Spinlock};
 
-use bytemuck::{Pod};
+use bytemuck::Pod;
 
 use asr::{
     timer::{self, TimerState},
     watcher::Pair,
-    Process,
-    Address,
+    Address, Process,
 };
 
 static STATE: Spinlock<State> = const_spinlock(State { game: None });
@@ -69,13 +68,11 @@ pub extern "C" fn update() {
         match Process::attach("Octopath_Travel") {
             Some(process) => {
                 match process.get_module("Octopath_Traveler-Win64-Shipping.exe") {
-                    Ok(Address(module)) => {
-                        state.game = Game::new(process, module)
-                    },
-                    _ => ()
+                    Ok(Address(module)) => state.game = Game::new(process, module),
+                    _ => (),
                 };
-            },
-            None => ()
+            }
+            None => (),
         }
     }
 
@@ -86,7 +83,6 @@ pub extern "C" fn update() {
             return;
         }
         if let Some(vars) = game.update_vars() {
-
             match timer::state() {
                 TimerState::NotRunning => {
                     asr::print_message("old");
@@ -97,11 +93,9 @@ pub extern "C" fn update() {
                         timer::start()
                     }
                 }
-                TimerState::Running | TimerState::Paused => {
-                }
+                TimerState::Running | TimerState::Paused => {}
                 _ => {}
             }
         }
     }
 }
-
