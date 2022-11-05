@@ -11,7 +11,7 @@ use asr::{
 };
 
 mod data;
-use data::zone::ZONES;
+use data::zone::{AREAS, SHRINES};
 
 static STATE: Spinlock<State> = const_spinlock(State { game: None });
 

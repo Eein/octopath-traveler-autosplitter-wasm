@@ -6,7 +6,18 @@ pub struct ZoneDescription {
     ring: u8
 }
 
-pub static ZONES: phf::Map<u8, ZoneDescription> = phf_map! {
+pub static SHRINES: phf::Map<u8, &'static str> = phf_map! {
+    179_u8 => "Cleric Shrine",
+    180_u8 => "Scholar Shrine",
+    181_u8 => "Merchant Shrine",
+    182_u8 => "Warrior Shrine",
+    183_u8 => "Dancer Shrine",
+    184_u8 => "Apothecary Shrine",
+    185_u8 => "Thief Shrine",
+    186_u8 => "Hunter Shrine"
+};
+
+pub static AREAS: phf::Map<u8, ZoneDescription> = phf_map! {
     12_u8 => ZoneDescription{name: "Cobbleston", region: "Highlands", ring: 1},
     13_u8 => ZoneDescription{name: "Stonegard", region: "Highlands", ring: 2},
     14_u8 => ZoneDescription{name: "Stonegard Heights", region: "Highlands", ring: 2},
