@@ -1,5 +1,6 @@
 // #![no_std]
 use spinning_top::{const_spinlock, Spinlock};
+use std::collections::HashMap;
 
 use bytemuck::Pod;
 
@@ -8,6 +9,9 @@ use asr::{
     watcher::Pair,
     Address, Process,
 };
+
+mod data;
+use data::zone::ZONES;
 
 static STATE: Spinlock<State> = const_spinlock(State { game: None });
 
@@ -34,14 +38,40 @@ struct Game {
     process: Process,
     module: u64,
     start: Watcher<u8>,
+    zone_id: Watcher<u8>,
+    money: Watcher<u16>,
+    game_state: Watcher<u8>,
+    cutscene_script_index: Watcher<u8>,
+    cutscene_progress_bar: Watcher<f64>,
+    ophilia_progress: Watcher<u8>,
+    cyrus_progress: Watcher<u8>,
+    tressa_progress: Watcher<u8>,
+    olberic_progress: Watcher<u8>,
+    primrose_progress: Watcher<u8>,
+    alfyn_progress: Watcher<u8>,
+    therion_progress: Watcher<u8>,
+    haanit_progress: Watcher<u8>,
 }
 
 impl Game {
     fn new(process: Process, module: u64) -> Option<Self> {
         let game = Self {
-            process: process,
-            module: module,
+            process,
+            module,
             start: Watcher::new(vec![0x2B32C48, 0xE30]),
+            zone_id: Watcher::new(vec![0x289D240, 0x36C]),
+            money: Watcher::new(vec![0x0289CC48, 0x370, 0x158]),
+            game_state: Watcher::new(vec![0x0289D270, 0x36C]),
+            cutscene_script_index: Watcher::new(vec![0x289D230, 0x388]),
+            cutscene_progress_bar: Watcher::new(vec![0x0289D268, 0x378, 0x20, 0x230, 0x288]),
+            ophilia_progress: Watcher::new(vec![0x0289CC48, 0x370, 0x1C8, 0x510]),
+            cyrus_progress: Watcher::new(vec![0x0289CC48, 0x370, 0x1C8, 0x1f0]),
+            tressa_progress: Watcher::new(vec![0x0289CC48, 0x370, 0x1C8, 0x128]),
+            olberic_progress: Watcher::new(vec![0x0289CC48, 0x370, 0x1C8, 0x60]),
+            primrose_progress: Watcher::new(vec![0x0289CC48, 0x370, 0x1C8, 0x2b8]),
+            alfyn_progress: Watcher::new(vec![0x0289CC48, 0x370, 0x1C8, 0x5d8]),
+            therion_progress: Watcher::new(vec![0x0289CC48, 0x370, 0x1C8, 0x448]),
+            haanit_progress: Watcher::new(vec![0x0289CC48, 0x370, 0x1C8, 0x380]),
         };
         Some(game)
     }
@@ -85,10 +115,6 @@ pub extern "C" fn update() {
         if let Some(vars) = game.update_vars() {
             match timer::state() {
                 TimerState::NotRunning => {
-                    asr::print_message("old");
-                    asr::print_message(&vars.start.old.to_string());
-                    asr::print_message("current");
-                    asr::print_message(&vars.start.current.to_string());
                     if vars.start.old == 0 && vars.start.current == 1 {
                         timer::start()
                     }
