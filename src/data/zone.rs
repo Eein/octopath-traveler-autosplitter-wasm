@@ -6,6 +6,18 @@ pub struct ZoneDescription {
     ring: u8
 }
 
+pub struct RegionDescription {
+    name: &'static str,
+    ring: u8
+}
+
+pub static ADVANCED_JOB_FIGHTS: phf::Map<u8, &'static str> = phf_map! {
+    187_u8 => "Steorra",
+    188_u8 => "Balogar",
+    189_u8 => "Winnehild",
+    190_u8 => "Dreisang"
+};
+
 pub static SHRINES: phf::Map<u8, &'static str> = phf_map! {
     179_u8 => "Cleric Shrine",
     180_u8 => "Scholar Shrine",
