@@ -42,13 +42,11 @@ struct Game {
     process: Process,
     module: u64,
     splits: HashSet<String>,
-    // is_chapter_ending: bool,
-    // char_chapter_ending: String,
     start: Watcher<u8>,
     zone_id: Watcher<u8>,
-    money: Watcher<u16>,
+    money: Watcher<u32>,
     game_state: Watcher<u8>,
-    cutscene_script_index: Watcher<u8>,
+    cutscene_script_index: Watcher<u16>,
     cutscene_progress_bar: Watcher<f64>,
     ophilia_progress: Watcher<u16>,
     cyrus_progress: Watcher<u16>,
@@ -129,7 +127,6 @@ pub enum Character {
 
 #[derive(Default)]
 pub struct Flags {
-    is_chapter_ending: bool,
     char_chapter_ending: Character,
 }
 
@@ -137,9 +134,9 @@ pub struct Flags {
 struct Vars<'a> {
     start: &'a Pair<u8>,
     zone_id: &'a Pair<u8>,
-    money: &'a Pair<u16>,
+    money: &'a Pair<u32>,
     game_state: &'a Pair<u8>,
-    cutscene_script_index: &'a Pair<u8>,
+    cutscene_script_index: &'a Pair<u16>,
     cutscene_progress_bar: &'a Pair<f64>,
     ophilia_progress: &'a Pair<u16>,
     cyrus_progress: &'a Pair<u16>,
@@ -214,7 +211,6 @@ pub extern "C" fn update() {
 }
 
 fn should_split(vars: &mut Vars) -> Option<String> {
-
     // TODO: we may not need to contains_key here on these lookup tables
     // Shrines
     if SHRINES.contains_key(&vars.zone_id.current) && vars.game_state.current == 5 && vars.game_state.old == 2 {
@@ -258,16 +254,12 @@ fn should_split(vars: &mut Vars) -> Option<String> {
 
     // Ophilia
     if vars.ophilia_progress.old < vars.ophilia_progress.current && vars.zone_id.old != 0 {
-        match vars.ophilia_progress.current {
-            170 => return vars.split("fight_guardian"),
-            1140 => return vars.split("fight_hrodvitnir"),
-            2110 => return vars.split("fight_mm_sf"),
-            3090 => return vars.split("fight_cultists"),
-            3150 => return vars.split("fight_mattias"),
-            _ => ()
-        }
-        if vars.ophilia_progress.current % 1000 == 0 {
-            vars.flags.is_chapter_ending = true;
+        if vars.ophilia_progress.current == 170 { return vars.split("fight_guardian") }
+        else if vars.ophilia_progress.current == 1140 { return vars.split("fight_hrodvitnir") }
+        else if vars.ophilia_progress.current == 2110 { return vars.split("fight_mm_sf") }
+        else if vars.ophilia_progress.current == 3090 { return vars.split("fight_cultists") }
+        else if vars.ophilia_progress.current == 3150 { return vars.split("fight_mattias") }
+        else if vars.ophilia_progress.current % 1000 == 0 {
             vars.flags.char_chapter_ending = Character::Ophilia;
         }
     }
@@ -277,6 +269,209 @@ fn should_split(vars: &mut Vars) -> Option<String> {
         // will taking the 1 - the current + a sleep here freeze the timer?
         // could we use this to get accurate precision on a probable split?
         return vars.split("character_story_endings_ophilia");
+    }
+
+    // Cyrus
+    if vars.cyrus_progress.old != vars.cyrus_progress.current && vars.zone_id.old != 0 {
+        if vars.cyrus_progress.current == 130 { return vars.split("fight_russell") }
+        else if vars.cyrus_progress.current == 1110 { return vars.split("fight_gideon") }
+        else if vars.cyrus_progress.current == 2160 { return vars.split("fight_yvon") }
+        else if vars.cyrus_progress.current == 3060 { return vars.split("fight_lucia") }
+        else if vars.cyrus_progress.current % 1000 == 0 {
+            vars.flags.char_chapter_ending = Character::Cyrus;
+        }
+    }
+
+    // Cyrus Ending
+    if vars.cyrus_progress.current == 3110 &&
+        vars.cutscene_script_index.current >= 138 &&
+        vars.cutscene_progress_bar.current > 0.98 {
+        return vars.split("character_story_endings_cyrus");
+    }
+
+    // Tressa
+    if vars.tressa_progress.old != vars.tressa_progress.current && vars.zone_id.old != 0 {
+        if vars.tressa_progress.current == 170 { return vars.split("fight_mikk_makk") }
+        else if vars.tressa_progress.current == 1120 { return vars.split("fight_omar") }
+        else if vars.tressa_progress.current == 2150 { return vars.split("fight_venomtooth_tiger") }
+        else if vars.tressa_progress.current == 3120 { return vars.split("fight_esmeralda") }
+        else if vars.tressa_progress.current % 1000 == 0 {  
+            vars.flags.char_chapter_ending = Character::Tressa;
+        }
+    }
+
+    // Tressa Ending
+    if vars.tressa_progress.current == 3180 && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 209) {
+        return vars.split("character_story_endings_tressa");
+    }
+
+    // Primrose
+    if vars.primrose_progress.old != vars.primrose_progress.current && vars.zone_id.old != 0 {
+        if vars.primrose_progress.current == 160 { return vars.split("fight_helgenish") }
+        else if vars.primrose_progress.current == 1180 { return vars.split("fight_rufus") }
+        else if vars.primrose_progress.current == 2170 { return vars.split("fight_albus") }
+        else if vars.primrose_progress.current == 3150 { return vars.split("fight_simeon2") }
+        else if vars.primrose_progress.current == 3120 { return vars.split("fight_simeon1") }
+        else if vars.primrose_progress.current % 1000 == 0 {
+            vars.flags.char_chapter_ending = Character::Primrose;
+        }
+    }
+
+    // Primrose Ending
+    if vars.primrose_progress.current == 3150 && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 94) {
+        return vars.split("character_story_endings_primrose");
+    }
+
+    // Olberic
+    if vars.olberic_progress.old < vars.olberic_progress.current && vars.zone_id.old != 0 {
+        if vars.olberic_progress.current == 110 { return vars.split("fight_brigands1") }
+        else if vars.olberic_progress.current == 140 { return vars.split("fight_brigands2") }
+        else if vars.olberic_progress.current == 160 { return vars.split("fight_gaston") }
+        else if vars.olberic_progress.current == 1070 { return vars.split("fight_victorino") }
+        else if vars.olberic_progress.current == 1140 { return vars.split("fight_joshua") }
+        else if vars.olberic_progress.current == 1180 { return vars.split("fight_archibold") }
+        else if vars.olberic_progress.current == 1220 { return vars.split("fight_gustav") }
+        else if vars.olberic_progress.current == 2070 { return vars.split("fight_lizards1") }
+        else if vars.olberic_progress.current == 2080 { return vars.split("fight_lizards2") }
+        else if vars.olberic_progress.current == 2110 { return vars.split("fight_lizardking") }
+        else if vars.olberic_progress.current == 2130 { return vars.split("fight_erhardt") }
+        else if vars.olberic_progress.current == 3050 { return vars.split("fight_red_hat") }
+        else if vars.olberic_progress.current == 3110 { return vars.split("fight_werner") }
+        else if vars.olberic_progress.current % 1000 == 0 {
+            vars.flags.char_chapter_ending = Character::Olberic;
+        }
+    }
+
+    // Olberic Ending
+    if vars.olberic_progress.current == 3120 && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 174) {
+        return vars.split("character_story_endings_olberic");
+    }
+
+    // Alfyn
+    if vars.alfyn_progress.old != vars.alfyn_progress.current && vars.zone_id.old != 0 {
+        if vars.alfyn_progress.current == 90 { return vars.split("fight_blotted_viper") }
+        else if vars.alfyn_progress.current == 1130 { return vars.split("fight_vanessa") }
+        else if vars.alfyn_progress.current == 2140 { return vars.split("fight_miguel") }
+        else if vars.alfyn_progress.current == 3240 { return vars.split("fight_ogre_eagle") }
+        else if vars.alfyn_progress.current % 1000 == 0 {
+            vars.flags.char_chapter_ending = Character::Alfyn;
+        }
+    }
+
+    // Alfyn Ending
+    if vars.alfyn_progress.current == 3300 && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 93) {
+        return vars.split("character_story_endings_alfyn");
+    }
+
+    // Therion
+    if vars.therion_progress.old != vars.therion_progress.current && vars.zone_id.old != 0 {
+        if vars.therion_progress.current == 140 { return vars.split("fight_heathecote") }
+        else if vars.therion_progress.current == 1130 { return vars.split("fight_orlick") }
+        else if vars.therion_progress.current == 2100 { return vars.split("fight_darius_henchmen") }
+        else if vars.therion_progress.current == 2150 { return vars.split("fight_gareth") }
+        else if vars.therion_progress.current == 3040 { return vars.split("fight_darius_underlings") }
+        else if vars.therion_progress.current == 3140 { return vars.split("3_percent_steal") }
+        else if vars.therion_progress.current == 3180 { return vars.split("fight_darius") }
+        else if vars.therion_progress.current % 1000 == 0 {
+            vars.flags.char_chapter_ending = Character::Therion;
+        }
+    }
+
+    // Therion Ending
+    if vars.therion_progress.current == 3200 && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 275) {
+        return vars.split("character_story_endings_therion");
+    }
+
+    // H'aanit
+    if vars.haanit_progress.old != vars.haanit_progress.current && vars.zone_id.old != 0 {
+        if vars.haanit_progress.current == 110 { return vars.split("fight_ghisarma") }
+        else if vars.haanit_progress.current == 1050 { return vars.split("fight_nathans_bodyguard") }
+        else if vars.haanit_progress.current == 1100 { return vars.split("fight_ancient_one") }
+        else if vars.haanit_progress.current == 1120 { return vars.split("fight_lord_of_the_forest") }
+        else if vars.haanit_progress.current == 2030 { return vars.split("fight_alaic") }
+        else if vars.haanit_progress.current == 2090 { return vars.split("fight_dragon") }
+        else if vars.haanit_progress.current == 3130 { return vars.split("fight_redeye") }
+        else if vars.haanit_progress.current % 1000 == 0 { 
+            vars.flags.char_chapter_ending = Character::Haanit;
+        }
+    }
+
+    // H'aanit Ending
+    if vars.haanit_progress.current == 3140 && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 195) {
+        return vars.split("character_story_endings_haanit");
+    }
+
+    // All Character Chapter Ends
+    if vars.game_state.current == 2 && vars.game_state.old == 5 {
+        match vars.flags.char_chapter_ending {
+            Character::NoCharacter => (), // reset char here
+            Character::Ophilia => { 
+                vars.flags.char_chapter_ending = Character::NoCharacter;
+                return vars.split("chapter_end_ophilia");
+            },
+            Character::Cyrus => { 
+                vars.flags.char_chapter_ending = Character::NoCharacter;
+                return vars.split("chapter_end_cyrus");
+            },
+            Character::Tressa => { 
+                vars.flags.char_chapter_ending = Character::NoCharacter;
+                return vars.split("chapter_end_tressa");
+            },
+            Character::Olberic => { 
+                vars.flags.char_chapter_ending = Character::NoCharacter;
+                return vars.split("chapter_end_olberic");
+            },
+            Character::Primrose => { 
+                vars.flags.char_chapter_ending = Character::NoCharacter;
+                return vars.split("chapter_end_primrose");
+            },
+            Character::Alfyn => { 
+                vars.flags.char_chapter_ending = Character::NoCharacter;
+                return vars.split("chapter_end_alfyn");
+            },
+            Character::Therion => { 
+                vars.flags.char_chapter_ending = Character::NoCharacter;
+                return vars.split("chapter_end_therion");
+            },
+            Character::Haanit => { 
+                vars.flags.char_chapter_ending = Character::NoCharacter;
+                return vars.split("chapter_end_haanit");
+            },
+        }
+    }
+
+    // Credits
+    if vars.zone_id.current == 10 && vars.zone_id.current != vars.zone_id.old {
+        return vars.split("credits");
+    }
+
+    // Galdera Splits
+    else if vars.zone_id.current == 195 && vars.zone_id.old == 194 {
+        return vars.split("finis_start");
+    }
+
+    else if vars.zone_id.current == 196 && vars.zone_id.old == 195 {
+        return vars.split("journeys_end_start");
+    }
+
+    else if vars.zone_id.current == 196 && vars.game_state.current == 6 && vars.game_state.old == 5 {
+        return vars.split("galdera_phase_1_start");
+    }
+
+    else if vars.zone_id.current == 198 && vars.zone_id.old == 196 {
+        return vars.split("galdera_phase_1_end");
+    }
+
+    else if vars.zone_id.current == 198 && vars.zone_id.old == 198 && vars.game_state.current == 6 && vars.game_state.old == 5 {
+        return vars.split("galdera_phase_2_start");
+    }
+
+    else if vars.zone_id.current == 198 && vars.zone_id.old == 198 && vars.game_state.current == 5 && vars.game_state.old == 6 {
+        return vars.split("galdera_phase_2_end");
+    }
+
+    else if vars.zone_id.current == 194 && vars.money.current - vars.money.old == 100000 {
+        return vars.split("at_journeys_end");
     }
 
     None

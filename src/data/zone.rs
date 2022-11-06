@@ -6,10 +6,10 @@ pub struct ZoneDescription {
     ring: u8
 }
 
-pub struct RegionDescription {
-    name: &'static str,
-    ring: u8
-}
+// pub struct RegionDescription {
+//     name: &'static str,
+//     ring: u8
+// }
 
 pub static ADVANCED_JOB_FIGHTS: phf::Map<u8, &'static str> = phf_map! {
     187_u8 => "Steorra",
