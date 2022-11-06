@@ -1,6 +1,7 @@
 // #![no_std]
 use spinning_top::{const_spinlock, Spinlock};
 use std::collections::HashSet;
+use std::fmt::{Display, Formatter, Result};
 
 use bytemuck::Pod;
 
@@ -110,7 +111,7 @@ pub struct State {
     game: Option<Game>,
 }
 
-#[derive(Default)]
+#[derive(Default, PartialEq)]
 pub enum Character {
     #[default]
     NoCharacter,
@@ -122,6 +123,22 @@ pub enum Character {
     Alfyn,
     Therion,
     Haanit,
+}
+
+impl Display for Character {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        match self {
+            Character::NoCharacter => write!(f, "none"),
+            Character::Ophilia => write!(f, "ophilia"),
+            Character::Cyrus => write!(f, "cyrus"),
+            Character::Tressa => write!(f, "tressa"),
+            Character::Olberic => write!(f, "olberic"),
+            Character::Primrose => write!(f, "primrose"),
+            Character::Alfyn => write!(f, "alfyn"),
+            Character::Therion => write!(f, "therion"),
+            Character::Haanit => write!(f, "haanit"),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -158,11 +175,52 @@ impl Vars<'_> {
         // we should be returning settings if they exist here to match if the user
         // has assigned a setting, otherwise return None;
         // return settings[key];
+        //
+        // These are my personal ophilia splits, i think the enters are correct, but i'll play it
+        // by ear
+        // let res = match key {
+        //     "fight_guardian" => Some(key.to_string()),
+        //     "character_cyrus" => Some(key.to_string()),
+        //     "fight_russell" => Some(key.to_string()),
+        //     "enter_83" => Some(key.to_string()),
+        //     "character_tressa" => Some(key.to_string()),
+        //     "fight_mikk_makk" => Some(key.to_string()),
+        //     "get_warrior_shrine" => Some(key.to_string()),
+        //     "merchant_shrine" => Some(key.to_string()),
+        //     "enter_120" => Some(key.to_string()),
+        //     "enter_130" => Some(key.to_string()),
+        //     "enter_34" => Some(key.to_string()),
+        //     "get_thief_shrine" => Some(key.to_string()),
+        //     "fight_hrodvitnir" => Some(key.to_string()),
+        //     "fight_mm_sf" => Some(key.to_string()),
+        //     "fight_cultists" => Some(key.to_string()),
+        //     "fight_mattias" => Some(key.to_string()),
+        //     "chapter_end_ophilia" => Some(key.to_string()),
+        //     _ => None,
+        // };
+        // res
         Some(key.to_string())
     }
 
     fn name_to_key(&self, name: &str) -> String {
         return name.to_lowercase().replace(" ", "_").replace("'", "");
+    }
+
+    fn split_chapter(&mut self, progress: u16) -> Option<String> {
+        if progress % 1000 == 0 && self.game_state.current == 2 && self.game_state.old == 5 {
+            let current_chapter = progress / 1000;
+            if current_chapter == 0 {
+                return None;
+            }
+            let key = format!(
+                "chapter_end_{}_{}",
+                self.flags.char_chapter_ending,
+                current_chapter.to_string()
+            );
+            self.flags.char_chapter_ending = Character::NoCharacter;
+            return self.split(&key);
+        }
+        None
     }
 }
 
@@ -186,7 +244,6 @@ pub extern "C" fn update() {
     if let Some(game) = &mut state.game {
         if !game.process.is_open() {
             state.game = None;
-            // timer::reset()
             return;
         }
         let vars = game.update_vars();
@@ -492,42 +549,22 @@ fn should_split(vars: &mut Vars) -> Option<String> {
     }
 
     // All Character Chapter Ends
-    if vars.game_state.current == 2 && vars.game_state.old == 5 {
-        match vars.flags.char_chapter_ending {
-            Character::NoCharacter => (), // reset char here
-            Character::Ophilia => {
-                vars.flags.char_chapter_ending = Character::NoCharacter;
-                return vars.split("chapter_end_ophilia");
-            }
-            Character::Cyrus => {
-                vars.flags.char_chapter_ending = Character::NoCharacter;
-                return vars.split("chapter_end_cyrus");
-            }
-            Character::Tressa => {
-                vars.flags.char_chapter_ending = Character::NoCharacter;
-                return vars.split("chapter_end_tressa");
-            }
-            Character::Olberic => {
-                vars.flags.char_chapter_ending = Character::NoCharacter;
-                return vars.split("chapter_end_olberic");
-            }
-            Character::Primrose => {
-                vars.flags.char_chapter_ending = Character::NoCharacter;
-                return vars.split("chapter_end_primrose");
-            }
-            Character::Alfyn => {
-                vars.flags.char_chapter_ending = Character::NoCharacter;
-                return vars.split("chapter_end_alfyn");
-            }
-            Character::Therion => {
-                vars.flags.char_chapter_ending = Character::NoCharacter;
-                return vars.split("chapter_end_therion");
-            }
-            Character::Haanit => {
-                vars.flags.char_chapter_ending = Character::NoCharacter;
-                return vars.split("chapter_end_haanit");
-            }
-        }
+    if vars.flags.char_chapter_ending != Character::NoCharacter
+        && vars.game_state.current == 2
+        && vars.game_state.old == 5
+    {
+        let progress = match vars.flags.char_chapter_ending {
+            Character::NoCharacter => 0,
+            Character::Ophilia => vars.ophilia_progress.current,
+            Character::Cyrus => vars.cyrus_progress.current,
+            Character::Tressa => vars.tressa_progress.current,
+            Character::Olberic => vars.olberic_progress.current,
+            Character::Primrose => vars.primrose_progress.current,
+            Character::Alfyn => vars.alfyn_progress.current,
+            Character::Therion => vars.alfyn_progress.current,
+            Character::Haanit => vars.haanit_progress.current,
+        };
+        return vars.split_chapter(progress);
     }
 
     // Credits
