@@ -3,7 +3,7 @@ use phf::phf_map;
 pub struct ZoneDescription {
     name: &'static str,
     region: &'static str,
-    ring: u8
+    ring: u8,
 }
 
 // pub struct RegionDescription {
@@ -210,4 +210,3 @@ pub static AREAS: phf::Map<u8, ZoneDescription> = phf_map! {
     195_u8 => ZoneDescription{name: "The Gate of Finis", region: "Highlands", ring: 3},
     196_u8 => ZoneDescription{name: "Journey's End", region: "Highlands", ring: 3},
 };
-
