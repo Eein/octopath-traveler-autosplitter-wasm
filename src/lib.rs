@@ -11,7 +11,7 @@ use asr::{
 };
 
 mod data;
-use data::zone::{AREAS, SHRINES};
+// use data::zone::{AREAS, SHRINES};
 
 static STATE: Spinlock<State> = const_spinlock(State { game: None });
 
@@ -38,20 +38,23 @@ struct Game {
     process: Process,
     module: u64,
     splits: HashSet<String>,
+    // is_chapter_ending: bool,
+    // char_chapter_ending: String,
     start: Watcher<u8>,
     zone_id: Watcher<u8>,
     money: Watcher<u16>,
     game_state: Watcher<u8>,
     cutscene_script_index: Watcher<u8>,
     cutscene_progress_bar: Watcher<f64>,
-    ophilia_progress: Watcher<u8>,
-    cyrus_progress: Watcher<u8>,
-    tressa_progress: Watcher<u8>,
-    olberic_progress: Watcher<u8>,
-    primrose_progress: Watcher<u8>,
-    alfyn_progress: Watcher<u8>,
-    therion_progress: Watcher<u8>,
-    haanit_progress: Watcher<u8>,
+    ophilia_progress: Watcher<u16>,
+    cyrus_progress: Watcher<u16>,
+    tressa_progress: Watcher<u16>,
+    olberic_progress: Watcher<u16>,
+    primrose_progress: Watcher<u16>,
+    alfyn_progress: Watcher<u16>,
+    therion_progress: Watcher<u16>,
+    haanit_progress: Watcher<u16>,
+    flags: Flags,
 }
 
 impl Game {
@@ -59,7 +62,6 @@ impl Game {
         let game = Self {
             process,
             module,
-            splits: HashSet::new(),
             start: Watcher::new(vec![0x2B32C48, 0xE30]),
             zone_id: Watcher::new(vec![0x289D240, 0x36C]),
             money: Watcher::new(vec![0x0289CC48, 0x370, 0x158]),
@@ -74,6 +76,8 @@ impl Game {
             alfyn_progress: Watcher::new(vec![0x0289CC48, 0x370, 0x1C8, 0x5d8]),
             therion_progress: Watcher::new(vec![0x0289CC48, 0x370, 0x1C8, 0x448]),
             haanit_progress: Watcher::new(vec![0x0289CC48, 0x370, 0x1C8, 0x380]),
+            flags: Default::default(),
+            splits: HashSet::new()
         };
         Some(game)
     }
@@ -94,23 +98,38 @@ impl Game {
             alfyn_progress: self.alfyn_progress.update(&self.process, self.module)?,
             therion_progress: self.therion_progress.update(&self.process, self.module)?,
             haanit_progress: self.haanit_progress.update(&self.process, self.module)?,
+            flags: &mut self.flags,
+            splits: &mut self.splits,
         })
     }
 
-    fn split(&mut self, key: &str) -> bool {
-        if self.splits.contains(key) { return false; }
-        self.splits.insert(key.to_string());
-        // we should be returning settings if they exist here to match if the user
-        // has assigned a setting
-        // return settings[key];
-        true
-    }
 }
 
 pub struct State {
     game: Option<Game>,
 }
 
+#[derive(Default)]
+pub enum Character {
+    #[default]
+    NoCharacter,
+    Ophilia,
+    Cyrus,
+    Tressa,
+    Olberic,
+    Primrose,
+    Alfyn,
+    Therion,
+    Haanit,
+}
+
+#[derive(Default)]
+pub struct Flags {
+    is_chapter_ending: bool,
+    char_chapter_ending: Character,
+}
+
+#[allow(unused)]
 struct Vars<'a> {
     start: &'a Pair<u8>,
     zone_id: &'a Pair<u8>,
@@ -118,17 +137,30 @@ struct Vars<'a> {
     game_state: &'a Pair<u8>,
     cutscene_script_index: &'a Pair<u8>,
     cutscene_progress_bar: &'a Pair<f64>,
-    ophilia_progress: &'a Pair<u8>,
-    cyrus_progress: &'a Pair<u8>,
-    tressa_progress: &'a Pair<u8>,
-    olberic_progress: &'a Pair<u8>,
-    primrose_progress: &'a Pair<u8>,
-    alfyn_progress: &'a Pair<u8>,
-    therion_progress: &'a Pair<u8>,
-    haanit_progress: &'a Pair<u8>,
-    is_chapter_ending: bool,
-    char_chapter_ending: String,
+    ophilia_progress: &'a Pair<u16>,
+    cyrus_progress: &'a Pair<u16>,
+    tressa_progress: &'a Pair<u16>,
+    olberic_progress: &'a Pair<u16>,
+    primrose_progress: &'a Pair<u16>,
+    alfyn_progress: &'a Pair<u16>,
+    therion_progress: &'a Pair<u16>,
+    haanit_progress: &'a Pair<u16>,
+    flags: &'a mut Flags,
+    splits: &'a mut HashSet<String>,
 }
+
+impl Vars<'_> {
+    fn split(&mut self, key: &str) -> Option<String> {
+        if self.splits.contains(key) { return None; }
+        self.splits.insert(key.to_string());
+        // we should be returning settings if they exist here to match if the user
+        // has assigned a setting, otherwise return None;
+        // return settings[key];
+        Some(key.to_string())
+    }
+}
+
+pub struct Splits(HashSet<String>);
 
 #[no_mangle]
 pub extern "C" fn update() {
@@ -151,7 +183,8 @@ pub extern "C" fn update() {
             // timer::reset()
             return;
         }
-        if let Some(vars) = game.update_vars() {
+        let vars = game.update_vars();
+        if let Some(mut vars) = vars {
             match timer::state() {
                 TimerState::NotRunning => {
                     if vars.start.old == 0 && vars.start.current == 1 {
@@ -159,7 +192,10 @@ pub extern "C" fn update() {
                     }
                 }
                 TimerState::Running => {
-                    if should_split(&game, &vars) { timer::split() }
+                    if let Some(reason) = should_split(&mut vars) {
+                        asr::print_message(&reason);
+                        timer::split();
+                    }
                 }
                 _ => {}
             }
@@ -167,26 +203,29 @@ pub extern "C" fn update() {
     }
 }
 
-pub fn should_split(&game: &Game, &vars: &Vars<'_>) -> bool {
-  // Ophilia
-  if vars.ophilia_progress.old < vars.ophilia_progress.current && vars.zone_id.old != 0 {
-    if vars.ophilia_progress.current == 170 { return game.split("fight_guardian") }
-    else if vars.ophilia_progress.current == 1140 { return game.split("fight_hrodvitnir") }
-    else if vars.ophilia_progress.current == 2110 { return game.split("fight_mm_sf") }
-    else if vars.ophilia_progress.current == 3090 { return game.split("fight_cultists") }
-    else if vars.ophilia_progress.current == 3150 { return game.split("fight_mattias") }
-    else if vars.ophilia_progress.current % 1000 == 0 {
-      vars.is_chapter_ending = true;
-      vars.char_chapter_ending = "Ophilia".to_string();
+fn should_split(vars: &mut Vars) -> Option<String> {
+    // Ophilia
+    if vars.ophilia_progress.old < vars.ophilia_progress.current && vars.zone_id.old != 0 {
+        match vars.ophilia_progress.current {
+            170 => return vars.split("fight_guardian"),
+            1140 => return vars.split("fight_hrodvitnir"),
+            2110 => return vars.split("fight_mm_sf"),
+            3090 => return vars.split("fight_cultists"),
+            3150 => return vars.split("fight_mattias"),
+            _ => ()
+        }
+        if vars.ophilia_progress.current % 1000 == 0 {
+            vars.flags.is_chapter_ending = true;
+            vars.flags.char_chapter_ending = Character::Ophilia;
+        }
     }
-  }
 
-  // Ophilia Ending
-  if vars.ophilia_progress.current == 3160 && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 94) {
-    // will taking the 1 - the current + a sleep here freeze the timer?
-    // could we use this to get accurate precision on a probable split?
-    return game.split("character_story_endings_ophilia");
-  }
+    // Ophilia Ending
+    if vars.ophilia_progress.current == 3160 && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 94) {
+        // will taking the 1 - the current + a sleep here freeze the timer?
+        // could we use this to get accurate precision on a probable split?
+        return vars.split("character_story_endings_ophilia");
+    }
 
-  false
+    None
 }
