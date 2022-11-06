@@ -11,7 +11,7 @@ use asr::{
 };
 
 mod data;
-// use data::zone::{AREAS, SHRINES};
+use data::zone::{SHRINES};
 
 static STATE: Spinlock<State> = const_spinlock(State { game: None });
 
@@ -158,6 +158,12 @@ impl Vars<'_> {
         // return settings[key];
         Some(key.to_string())
     }
+
+    fn name_to_key(&self, name: &str) -> String {
+        return name.to_lowercase()
+        .replace(" ", "_")
+        .replace("'", "")
+    }
 }
 
 pub struct Splits(HashSet<String>);
@@ -204,6 +210,42 @@ pub extern "C" fn update() {
 }
 
 fn should_split(vars: &mut Vars) -> Option<String> {
+
+    // Shrines
+    if SHRINES.contains_key(&vars.zone_id.current) && vars.game_state.current == 5 && vars.game_state.old == 2 {
+        if let Some(shrine) = SHRINES.get(&vars.zone_id.current) {
+            let shrine_key = format!("get_{}", vars.name_to_key(&shrine));
+            return vars.split(&shrine_key);
+        }
+    }
+
+    // Advanced Job Fights
+    // if (vars.AdvancedJobFights.ContainsKey(current.zoneID) && current.gameState == 5 && old.gameState == 6) {
+    //     return vars.Split("advanced_job_fight_" + vars.NameToKey(vars.AdvancedJobFights[current.zoneID]));
+    // }
+
+    // Enter & Exit Area
+    // if (old.zoneID != current.zoneID && old.zoneID != 0) {
+    //     // Enter Area
+    //     if (vars.AreaZoneIDs.ContainsKey(current.zoneID) && current.gameState == 2 && old.gameState == 2 && vars.Split("enter_" + current.zoneID)) {
+    //         return true;
+    //     }
+    //     // Exit Area
+    //     if (vars.AreaZoneIDs.ContainsKey(old.zoneID) && (old.gameState == 2 || old.gameState == 4) && vars.Split("exit_" + old.zoneID)) {
+    //         return true;
+    //     }
+    // }
+
+    // Characters Joining
+    if vars.ophilia_progress.old == 0 && vars.ophilia_progress.current >= 120 { return vars.split("character_ophilia") }
+    if vars.cyrus_progress.old == 0 && vars.cyrus_progress.current >= 100 { return vars.split("character_cyrus") }
+    if vars.tressa_progress.old == 0 && vars.tressa_progress.current >= 110 { return vars.split("character_tressa") }
+    if vars.olberic_progress.old == 0 && vars.olberic_progress.current >= 110 { return vars.split("character_olberic") }
+    if vars.primrose_progress.old == 0 && vars.primrose_progress.current >= 140 { return vars.split("character_primrose") }
+    if vars.alfyn_progress.old == 0 && vars.alfyn_progress.current >= 70 { return vars.split("character_alfyn") }
+    if vars.haanit_progress.old == 0 && vars.haanit_progress.current >= 110 { return vars.split("character_haanit") }
+    if vars.therion_progress.old == 0 && vars.therion_progress.current >= 70 { return vars.split("character_therion") }
+
     // Ophilia
     if vars.ophilia_progress.old < vars.ophilia_progress.current && vars.zone_id.old != 0 {
         match vars.ophilia_progress.current {
