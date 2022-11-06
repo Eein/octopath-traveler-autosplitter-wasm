@@ -1,6 +1,7 @@
 # Octopath Traveler WASM Autosplitter
 
 # TODO:
+- [ ] Correctly handle reset states (if they are even implemented yet)
 - [ ] Waiting on settings to be added to implement user configuration
 - [ ] Waiting on tie-breaker PR to be merged https://github.com/LiveSplit/livesplit-core/pull/589
 - [ ] Add XBOX and Windows Steam checks
