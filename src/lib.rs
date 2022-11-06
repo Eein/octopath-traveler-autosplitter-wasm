@@ -11,7 +11,11 @@ use asr::{
 };
 
 mod data;
-use data::zone::{SHRINES};
+use data::zone::{
+    AREAS,
+    SHRINES,
+    ADVANCED_JOB_FIGHTS,
+};
 
 static STATE: Spinlock<State> = const_spinlock(State { game: None });
 
@@ -211,30 +215,36 @@ pub extern "C" fn update() {
 
 fn should_split(vars: &mut Vars) -> Option<String> {
 
+    // TODO: we may not need to contains_key here on these lookup tables
     // Shrines
     if SHRINES.contains_key(&vars.zone_id.current) && vars.game_state.current == 5 && vars.game_state.old == 2 {
         if let Some(shrine) = SHRINES.get(&vars.zone_id.current) {
-            let shrine_key = format!("get_{}", vars.name_to_key(&shrine));
-            return vars.split(&shrine_key);
+            let key = format!("get_{}", vars.name_to_key(&shrine));
+            return vars.split(&key);
         }
     }
 
     // Advanced Job Fights
-    // if (vars.AdvancedJobFights.ContainsKey(current.zoneID) && current.gameState == 5 && old.gameState == 6) {
-    //     return vars.Split("advanced_job_fight_" + vars.NameToKey(vars.AdvancedJobFights[current.zoneID]));
-    // }
+    if ADVANCED_JOB_FIGHTS.contains_key(&vars.zone_id.current) && vars.game_state.current == 5 && vars.game_state.old == 6 {
+        if let Some(advanced_job) = ADVANCED_JOB_FIGHTS.get(&vars.zone_id.current) {
+            let key = format!("advanced_job_fight_{}", vars.name_to_key(&advanced_job)); 
+            return vars.split(&key);
+        }
+    }
 
     // Enter & Exit Area
-    // if (old.zoneID != current.zoneID && old.zoneID != 0) {
-    //     // Enter Area
-    //     if (vars.AreaZoneIDs.ContainsKey(current.zoneID) && current.gameState == 2 && old.gameState == 2 && vars.Split("enter_" + current.zoneID)) {
-    //         return true;
-    //     }
-    //     // Exit Area
-    //     if (vars.AreaZoneIDs.ContainsKey(old.zoneID) && (old.gameState == 2 || old.gameState == 4) && vars.Split("exit_" + old.zoneID)) {
-    //         return true;
-    //     }
-    // }
+    if vars.zone_id.old != vars.zone_id.current && vars.zone_id.old != 0 {
+        // Enter Area
+        if AREAS.contains_key(&vars.zone_id.current) && vars.game_state.current == 2 && vars.game_state.old == 2 {
+            let key = format!("enter_{}", vars.zone_id.current.to_string()); 
+            return vars.split(&key);
+        }
+        // Exit Area
+        if AREAS.contains_key(&vars.zone_id.old) && (vars.game_state.old == 2 || vars.game_state.old == 4) {
+            let key = format!("exit_{}", vars.zone_id.old.to_string()); 
+            return vars.split(&key);
+        }
+    }
 
     // Characters Joining
     if vars.ophilia_progress.old == 0 && vars.ophilia_progress.current >= 120 { return vars.split("character_ophilia") }
