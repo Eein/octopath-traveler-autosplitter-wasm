@@ -186,27 +186,27 @@ impl Vars<'_> {
         //
         // These are my personal ophilia splits, i think the enters are correct, but i'll play it
         // by ear
-        let res = match key {
-            "fight_guardian" => Some(key.to_string()),
-            "character_cyrus" => Some(key.to_string()),
-            "fight_russell" => Some(key.to_string()),
-            "enter_83" => Some(key.to_string()),
-            "character_tressa" => Some(key.to_string()),
-            "fight_mikk_makk" => Some(key.to_string()),
-            "get_warrior_shrine" => Some(key.to_string()),
-            "merchant_shrine" => Some(key.to_string()),
-            "enter_120" => Some(key.to_string()),
-            "enter_130" => Some(key.to_string()),
-            "enter_34" => Some(key.to_string()),
-            "fight_hrodvitnir" => Some(key.to_string()),
-            "fight_mm_sf" => Some(key.to_string()),
-            "fight_cultists" => Some(key.to_string()),
-            "fight_mattias" => Some(key.to_string()),
-            "chapter_end_ophilia" => Some(key.to_string()),
-            _ => None,
-        };
-        res
-        // Some(key.to_string())
+        // let res = match key {
+        //     "fight_guardian" => Some(key.to_string()),
+        //     "character_cyrus" => Some(key.to_string()),
+        //     "fight_russell" => Some(key.to_string()),
+        //     "enter_83" => Some(key.to_string()),
+        //     "character_tressa" => Some(key.to_string()),
+        //     "fight_mikk_makk" => Some(key.to_string()),
+        //     "get_warrior_shrine" => Some(key.to_string()),
+        //     "merchant_shrine" => Some(key.to_string()),
+        //     "enter_120" => Some(key.to_string()),
+        //     "enter_130" => Some(key.to_string()),
+        //     "enter_34" => Some(key.to_string()),
+        //     "fight_hrodvitnir" => Some(key.to_string()),
+        //     "fight_mm_sf" => Some(key.to_string()),
+        //     "fight_cultists" => Some(key.to_string()),
+        //     "fight_mattias" => Some(key.to_string()),
+        //     "chapter_end_ophilia" => Some(key.to_string()),
+        //     _ => None,
+        // };
+        // res
+        Some(key.to_string())
     }
 
     fn name_to_key(&self, name: &str) -> String {
