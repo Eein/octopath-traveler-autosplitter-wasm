@@ -259,6 +259,8 @@ pub extern "C" fn update() {
             match timer::state() {
                 TimerState::NotRunning => {
                     if vars.start.old == 0 && vars.start.current == 1 {
+                        *vars.deaths = 0;
+                        *vars.encounters = 0;
                         *vars.splits = Default::default();
                         *vars.flags = Default::default();
                         timer::start()
