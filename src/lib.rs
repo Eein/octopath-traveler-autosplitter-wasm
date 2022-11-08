@@ -53,6 +53,8 @@ struct Game {
     alfyn_progress: Watcher<u16>,
     therion_progress: Watcher<u16>,
     haanit_progress: Watcher<u16>,
+    encounters: u16,
+    deaths: u16,
     flags: Flags,
 }
 
@@ -75,6 +77,8 @@ impl Game {
             alfyn_progress: Watcher::new(vec![0x0289CC48, 0x370, 0x1C8, 0x5d8]),
             therion_progress: Watcher::new(vec![0x0289CC48, 0x370, 0x1C8, 0x448]),
             haanit_progress: Watcher::new(vec![0x0289CC48, 0x370, 0x1C8, 0x380]),
+            encounters: 0,
+            deaths: 0,
             flags: Default::default(),
             splits: HashSet::new(),
         };
@@ -101,6 +105,8 @@ impl Game {
             alfyn_progress: self.alfyn_progress.update(&self.process, self.module)?,
             therion_progress: self.therion_progress.update(&self.process, self.module)?,
             haanit_progress: self.haanit_progress.update(&self.process, self.module)?,
+            encounters: &mut self.encounters,
+            deaths: &mut self.deaths,
             flags: &mut self.flags,
             splits: &mut self.splits,
         })
@@ -163,6 +169,8 @@ struct Vars<'a> {
     therion_progress: &'a Pair<u16>,
     haanit_progress: &'a Pair<u16>,
     flags: &'a mut Flags,
+    encounters: &'a mut u16,
+    deaths: &'a mut u16,
     splits: &'a mut HashSet<String>,
 }
 
@@ -178,28 +186,27 @@ impl Vars<'_> {
         //
         // These are my personal ophilia splits, i think the enters are correct, but i'll play it
         // by ear
-        // let res = match key {
-        //     "fight_guardian" => Some(key.to_string()),
-        //     "character_cyrus" => Some(key.to_string()),
-        //     "fight_russell" => Some(key.to_string()),
-        //     "enter_83" => Some(key.to_string()),
-        //     "character_tressa" => Some(key.to_string()),
-        //     "fight_mikk_makk" => Some(key.to_string()),
-        //     "get_warrior_shrine" => Some(key.to_string()),
-        //     "merchant_shrine" => Some(key.to_string()),
-        //     "enter_120" => Some(key.to_string()),
-        //     "enter_130" => Some(key.to_string()),
-        //     "enter_34" => Some(key.to_string()),
-        //     "get_thief_shrine" => Some(key.to_string()),
-        //     "fight_hrodvitnir" => Some(key.to_string()),
-        //     "fight_mm_sf" => Some(key.to_string()),
-        //     "fight_cultists" => Some(key.to_string()),
-        //     "fight_mattias" => Some(key.to_string()),
-        //     "chapter_end_ophilia" => Some(key.to_string()),
-        //     _ => None,
-        // };
-        // res
-        Some(key.to_string())
+        let res = match key {
+            "fight_guardian" => Some(key.to_string()),
+            "character_cyrus" => Some(key.to_string()),
+            "fight_russell" => Some(key.to_string()),
+            "enter_83" => Some(key.to_string()),
+            "character_tressa" => Some(key.to_string()),
+            "fight_mikk_makk" => Some(key.to_string()),
+            "get_warrior_shrine" => Some(key.to_string()),
+            "merchant_shrine" => Some(key.to_string()),
+            "enter_120" => Some(key.to_string()),
+            "enter_130" => Some(key.to_string()),
+            "enter_34" => Some(key.to_string()),
+            "fight_hrodvitnir" => Some(key.to_string()),
+            "fight_mm_sf" => Some(key.to_string()),
+            "fight_cultists" => Some(key.to_string()),
+            "fight_mattias" => Some(key.to_string()),
+            "chapter_end_ophilia" => Some(key.to_string()),
+            _ => None,
+        };
+        res
+        // Some(key.to_string())
     }
 
     fn name_to_key(&self, name: &str) -> String {
@@ -246,8 +253,9 @@ pub extern "C" fn update() {
             state.game = None;
             return;
         }
-        let vars = game.update_vars();
-        if let Some(mut vars) = vars {
+        if let Some(mut vars) = game.update_vars() {
+            timer::set_variable_int("Encounters", *vars.encounters);
+            timer::set_variable_int("Deaths", *vars.deaths);
             match timer::state() {
                 TimerState::NotRunning => {
                     if vars.start.old == 0 && vars.start.current == 1 {
@@ -261,10 +269,28 @@ pub extern "C" fn update() {
                         asr::print_message(&reason);
                         timer::split();
                     }
+                    if vars.game_state.current == 6 && vars.game_state.old == 2 { 
+
+                        // asr::print_message("incremementing encounters");
+                        // asr::print_message("before:");
+                        // asr::print_message(&vars.encounters.to_string());
+                        *vars.encounters = *vars.encounters + 1;
+                        // asr::print_message("after:");
+                        // asr::print_message(&vars.encounters.to_string());
+                    } 
+                    if vars.game_state.current == 7 && vars.game_state.old == 6 { 
+                        // asr::print_message("incrementing deaths");
+                        // asr::print_message("before:");
+                        // asr::print_message(&vars.deaths.to_string());
+                        *vars.deaths = *vars.deaths + 1;
+                        // asr::print_message("after:");
+                        // asr::print_message(&vars.deaths.to_string());
+                    }
                 }
                 _ => {}
             }
         }
+
     }
 }
 
