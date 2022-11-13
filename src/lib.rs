@@ -44,7 +44,7 @@ struct Game {
     money: Watcher<u32>,
     game_state: Watcher<u8>,
     cutscene_script_index: Watcher<u16>,
-    cutscene_progress_bar: Watcher<f64>,
+    cutscene_progress_bar: Watcher<f32>,
     ophilia_progress: Watcher<u16>,
     cyrus_progress: Watcher<u16>,
     tressa_progress: Watcher<u16>,
@@ -159,7 +159,7 @@ struct Vars<'a> {
     money: &'a Pair<u32>,
     game_state: &'a Pair<u8>,
     cutscene_script_index: &'a Pair<u16>,
-    cutscene_progress_bar: &'a Pair<f64>,
+    cutscene_progress_bar: &'a Pair<f32>,
     ophilia_progress: &'a Pair<u16>,
     cyrus_progress: &'a Pair<u16>,
     tressa_progress: &'a Pair<u16>,
@@ -194,7 +194,7 @@ impl Vars<'_> {
         //     "character_tressa" => Some(key.to_string()),
         //     "fight_mikk_makk" => Some(key.to_string()),
         //     "get_warrior_shrine" => Some(key.to_string()),
-        //     "merchant_shrine" => Some(key.to_string()),
+        //     "get_merchant_shrine" => Some(key.to_string()),
         //     "enter_120" => Some(key.to_string()),
         //     "enter_130" => Some(key.to_string()),
         //     "enter_34" => Some(key.to_string()),
@@ -202,7 +202,7 @@ impl Vars<'_> {
         //     "fight_mm_sf" => Some(key.to_string()),
         //     "fight_cultists" => Some(key.to_string()),
         //     "fight_mattias" => Some(key.to_string()),
-        //     "chapter_end_ophilia" => Some(key.to_string()),
+        //     "character_story_endings_ophilia" => Some(key.to_string()),
         //     _ => None,
         // };
         // res
@@ -272,21 +272,10 @@ pub extern "C" fn update() {
                         timer::split();
                     }
                     if vars.game_state.current == 6 && vars.game_state.old == 2 { 
-
-                        // asr::print_message("incremementing encounters");
-                        // asr::print_message("before:");
-                        // asr::print_message(&vars.encounters.to_string());
                         *vars.encounters = *vars.encounters + 1;
-                        // asr::print_message("after:");
-                        // asr::print_message(&vars.encounters.to_string());
                     } 
                     if vars.game_state.current == 7 && vars.game_state.old == 6 { 
-                        // asr::print_message("incrementing deaths");
-                        // asr::print_message("before:");
-                        // asr::print_message(&vars.deaths.to_string());
                         *vars.deaths = *vars.deaths + 1;
-                        // asr::print_message("after:");
-                        // asr::print_message(&vars.deaths.to_string());
                     }
                 }
                 _ => {}
@@ -328,14 +317,18 @@ fn should_split(vars: &mut Vars) -> Option<String> {
             && vars.game_state.old == 2
         {
             let key = format!("enter_{}", vars.zone_id.current.to_string());
-            return vars.split(&key);
+            if let Some(enter) = vars.split(&key) {
+                return Some(enter);
+            }
         }
         // Exit Area
         if AREAS.contains_key(&vars.zone_id.old)
             && (vars.game_state.old == 2 || vars.game_state.old == 4)
         {
             let key = format!("exit_{}", vars.zone_id.old.to_string());
-            return vars.split(&key);
+            if let Some(exit) = vars.split(&key) {
+                return Some(exit);
+            }
         }
     }
 
@@ -383,8 +376,14 @@ fn should_split(vars: &mut Vars) -> Option<String> {
     }
 
     // Ophilia Ending
+    // if vars.cutscene_script_index.old == 29 {
+    //     asr::print_message("Cutscene Progress bar:");
+    //     asr::print_message(&vars.cutscene_progress_bar.current.to_string());
+    //     asr::print_message("Cutscene script index:");
+    //     asr::print_message(&vars.cutscene_script_index.current.to_string());
+    // }
     if vars.ophilia_progress.current == 3160
-        && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 94)
+        && (vars.cutscene_progress_bar.current > 0.97)
     {
         // will taking the 1 - the current + a sleep here freeze the timer?
         // could we use this to get accurate precision on a probable split?
@@ -409,7 +408,7 @@ fn should_split(vars: &mut Vars) -> Option<String> {
     // Cyrus Ending
     if vars.cyrus_progress.current == 3110
         && vars.cutscene_script_index.current >= 138
-        && vars.cutscene_progress_bar.current > 0.98
+        && vars.cutscene_progress_bar.current > 0.97
     {
         return vars.split("character_story_endings_cyrus");
     }
@@ -431,7 +430,7 @@ fn should_split(vars: &mut Vars) -> Option<String> {
 
     // Tressa Ending
     if vars.tressa_progress.current == 3180
-        && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 209)
+        && (vars.cutscene_progress_bar.current > 0.97 || vars.cutscene_script_index.current > 209)
     {
         return vars.split("character_story_endings_tressa");
     }
@@ -455,7 +454,7 @@ fn should_split(vars: &mut Vars) -> Option<String> {
 
     // Primrose Ending
     if vars.primrose_progress.current == 3150
-        && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 94)
+        && (vars.cutscene_progress_bar.current > 0.97 || vars.cutscene_script_index.current > 94)
     {
         return vars.split("character_story_endings_primrose");
     }
@@ -495,7 +494,7 @@ fn should_split(vars: &mut Vars) -> Option<String> {
 
     // Olberic Ending
     if vars.olberic_progress.current == 3120
-        && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 174)
+        && (vars.cutscene_progress_bar.current > 0.97 || vars.cutscene_script_index.current > 174)
     {
         return vars.split("character_story_endings_olberic");
     }
@@ -517,7 +516,7 @@ fn should_split(vars: &mut Vars) -> Option<String> {
 
     // Alfyn Ending
     if vars.alfyn_progress.current == 3300
-        && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 93)
+        && (vars.cutscene_progress_bar.current > 0.97 || vars.cutscene_script_index.current > 93)
     {
         return vars.split("character_story_endings_alfyn");
     }
@@ -545,7 +544,7 @@ fn should_split(vars: &mut Vars) -> Option<String> {
 
     // Therion Ending
     if vars.therion_progress.current == 3200
-        && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 275)
+        && (vars.cutscene_progress_bar.current > 0.97 || vars.cutscene_script_index.current > 275)
     {
         return vars.split("character_story_endings_therion");
     }
@@ -573,7 +572,7 @@ fn should_split(vars: &mut Vars) -> Option<String> {
 
     // H'aanit Ending
     if vars.haanit_progress.current == 3140
-        && (vars.cutscene_progress_bar.current > 0.98 || vars.cutscene_script_index.current > 195)
+        && (vars.cutscene_progress_bar.current > 0.97 || vars.cutscene_script_index.current > 195)
     {
         return vars.split("character_story_endings_haanit");
     }
